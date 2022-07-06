@@ -1,1 +1,2 @@
-# weighted_random
+# 权重随机算法
+#Weighted random algorithm
