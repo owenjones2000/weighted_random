@@ -7,7 +7,7 @@
 //         $values[$i] = $i;
 //         $weight[$i] = mt_rand(1, 1000);
 //     }
-// }
+// } 
 
 // innit($weight);
 $weight = [
@@ -94,15 +94,77 @@ function binary_random($weight)
     }
     return $pool[$mid][0];
 }
+
+
+class AliasMethod
+{
+    private $length;
+    private $prob_arr;
+    private $alias;
+
+    public function __construct($pdf)
+    {
+        $this->length = 0;
+        $this->prob_arr = $this->alias = array();
+        $this->_init($pdf);
+    }
+    private function _init($pdf)
+    {
+        $this->length = count($pdf);
+        if ($this->length == 0)
+            die("pdf is empty");
+        if (array_sum($pdf) != 1.0)
+            die("pdf sum not equal 1, sum:" . array_sum($pdf));
+
+        $small = $large = array();
+        for ($i = 0; $i < $this->length; $i++) {
+            $pdf[$i] *= $this->length;
+            if ($pdf[$i] < 1.0)
+                $small[] = $i;
+            else
+                $large[] = $i;
+        }
+
+        while (count($small) != 0 && count($large) != 0) {
+            $s_index = array_shift($small);
+            $l_index = array_shift($large);
+            $this->prob_arr[$s_index] = $pdf[$s_index];
+            $this->alias[$s_index] = $l_index;
+            
+            $pdf[$l_index] -= 1.0 - $pdf[$s_index];
+            
+            if ($pdf[$l_index] < 1.0)
+                $small[] = $l_index;
+            else
+                $large[] = $l_index;
+            
+        }
+        while (!empty($small))
+            $this->prob_arr[array_shift($small)] = 1.0;
+        while (!empty($large))
+            $this->prob_arr[array_shift($large)] = 1.0;
+        
+    }
+    public function next_rand()
+    {
+        $column = mt_rand(0, $this->length - 1);
+        return mt_rand() / mt_getrandmax() < $this->prob_arr[$column] ? $column : $this->alias[$column];
+    }
+}
 // $fuc = ['linear_random' =>linear_random($weight),'sort_linear_random' =>sort_linear_random($weight)];
 // $res = prepare_weighted_random1($values, $weight);
 // var_dump($fuc[1]);
-var_dump(binary_random($weight));die;
-$count = 100000;
+
+$aliasweight = [0.1, 0.3, 0.2, 0.4];
+$table = new AliasMethod($aliasweight);
+
+// var_dump($table->next_rand());die;
+// var_dump(binary_random($weight));die;
+$count = 1000000;
 $ratio = [];
 $count_arr = [];
 for ($i=1; $i <= $count ; $i++) {
-    $key = binary_random($weight);
+    $key = $table->next_rand();
     $count_arr[$key] +=1;
 }
 foreach ($count_arr as $key => $value) {
